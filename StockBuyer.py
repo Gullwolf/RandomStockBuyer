@@ -5,8 +5,8 @@ from datetime import datetime
 from random import randint
 
 BASE_URL = "https://paper-api.alpaca.markets"
-KEY_ID = "PKM029F6M9UPTKURU3QS"
-SECRET_KEY = "fiIAe9lbKCbt5LYo1sracYxsVeJZtIzdk8A5qk52"
+KEY_ID = ""
+SECRET_KEY = ""
 
 # Instantiate REST API Connection
 api = REST(key_id=KEY_ID,secret_key=SECRET_KEY,base_url=BASE_URL)
