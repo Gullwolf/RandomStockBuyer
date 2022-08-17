@@ -1,0 +1,153 @@
+import math
+from alpaca_trade_api.rest import REST
+import time
+from datetime import datetime
+from random import randint
+
+BASE_URL = "https://paper-api.alpaca.markets"
+KEY_ID = ""
+SECRET_KEY = ""
+
+# Instantiate REST API Connection
+api = REST(key_id=KEY_ID,secret_key=SECRET_KEY,base_url=BASE_URL, api_version = "v2")
+
+
+def checkDay():
+    currentDayAsInt = datetime.today().weekday()
+    print(currentDayAsInt)
+    return currentDayAsInt
+
+def checkTime():
+    now = datetime.now()
+    currentHour = now.hour
+    #print(currentHour)
+    currentMinute = now.minute
+    #print(currentMinute)
+    if(len(str(currentMinute)) <= 1 ):
+        currentTime = "" + str(currentHour) + "0" + str(currentMinute)
+    else:
+        currentTime = "" + str(currentHour) + str(currentMinute)
+    currentTimeAsInt = int(currentTime)
+    #print(currentTime)
+    print(currentTimeAsInt)
+    return currentTimeAsInt
+
+def chooseStock():
+    value =  randint(0, 8179)
+    print(value)
+
+    fp = open(r'.\stocks.txt', 'r')
+    
+
+    with open(r".\stocks.txt", 'r') as fp:
+        # lines to read
+        line_numbers = [value]
+        # To store lines
+        lines = []
+        for i, line in enumerate(fp):
+            if (i in line_numbers):
+                lines.append(line.strip())
+            elif (i > value):
+                break
+    print(lines)
+    print(str(lines[0]))
+
+    return str(lines[0])
+
+def buyStock(chosenStock):
+
+    account = api.get_account()
+    moneyInAccount = account.equity
+
+    asset = api.get_latest_trade(chosenStock)
+    print(asset)
+    print(asset.p)
+
+    totalBuy = (float(moneyInAccount) / float(asset.p))
+    print(totalBuy)
+    totalBuy = math.floor(totalBuy)
+    print(totalBuy)
+
+
+
+    api.submit_order(
+    symbol= chosenStock,
+    qty= totalBuy,
+    side= 'buy',
+    type= 'market',
+    time_in_force= 'gtc'
+    )
+
+    print("Bought")
+
+    return checkPrice(chosenStock)
+
+def sellStock(chosenStock):
+
+    position = api.get_position(chosenStock)
+    totalSell = position.qty_available
+    print(position.qty)
+    print(position.qty_available)
+
+    api.submit_order(
+    symbol= chosenStock,
+    qty= totalSell,
+    side= 'sell',
+    type= 'market',
+    time_in_force= 'gtc'
+    )
+
+    print("SOLD!")
+
+def checkPrice(chosenStock):
+
+    time.sleep(1)
+
+    position = api.get_position(chosenStock)
+    print("Current Price: " + position.current_price)
+
+    return float(position.current_price)
+
+def checkPositions():
+    position = api.get_position()
+    position
+
+def main():
+    chosenStock = ""
+    sold = False
+    currentPrice = 0.00
+    profitPrice = 0.00
+    lossPrice = 0.00
+    daysOfTheWeek = [0, 1, 2, 3, 4]
+
+    while(True):
+        #print("WRONG DAY!")
+        if(checkDay() in daysOfTheWeek):
+            #print("WRONG TIME!")
+            if((checkTime() >= 830) and (checkTime() <= 2100)):
+                chosenStock = chooseStock()
+                #buyStock(chosenStock)
+                currentPrice = buyStock(chosenStock)
+                print("BOUGHT!")
+                profitPrice = currentPrice + ((currentPrice / 100) * 0.1)
+                print(profitPrice)
+                lossPrice = currentPrice - ((currentPrice / 100) * 0.2)
+                print(lossPrice)
+                sold = False
+                while(not sold):
+                    time.sleep(0.1)
+                    currentPrice = checkPrice(chosenStock)
+                    if(currentPrice >= profitPrice):
+                        sellStock(chosenStock)
+                        sold = True
+                        print("SOLD!")
+                    elif(currentPrice <= lossPrice):
+                        sellStock(chosenStock)
+                        sold = True
+                        print("SOLD!")
+                    elif(checkTime() == 1625):
+                        sellStock(chosenStock)
+                        sold = True
+                        print("SOLD!")
+
+main()
