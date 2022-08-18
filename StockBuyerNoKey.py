@@ -3,6 +3,8 @@ from alpaca_trade_api.rest import REST
 import time
 from datetime import datetime
 from random import randint
+import json
+
 
 BASE_URL = "https://paper-api.alpaca.markets"
 KEY_ID = ""
@@ -49,7 +51,7 @@ def chooseStock():
                 lines.append(line.strip())
             elif (i > value):
                 break
-    print(lines)
+    #print(lines)
     print(str(lines[0]))
 
     return str(lines[0])
@@ -60,13 +62,13 @@ def buyStock(chosenStock):
     moneyInAccount = account.equity
 
     asset = api.get_latest_trade(chosenStock)
-    print(asset)
-    print(asset.p)
+    #print(asset)
+    #print(asset.p)
 
     totalBuy = (float(moneyInAccount) / float(asset.p))
-    print(totalBuy)
+    #print(totalBuy)
     totalBuy = math.floor(totalBuy)
-    print(totalBuy)
+    print("Ammount bought: " + str(totalBuy))
 
 
 
@@ -80,14 +82,14 @@ def buyStock(chosenStock):
 
     print("Bought")
 
-    return checkPrice(chosenStock)
+    return checkFilledPrice()
 
 def sellStock(chosenStock):
 
     position = api.get_position(chosenStock)
     totalSell = position.qty_available
-    print(position.qty)
-    print(position.qty_available)
+    #print(position.qty)
+    print("Ammount sold: " + position.qty_available)
 
     api.submit_order(
     symbol= chosenStock,
@@ -100,9 +102,6 @@ def sellStock(chosenStock):
     print("SOLD!")
 
 def checkPrice(chosenStock):
-
-    time.sleep(1)
-
     position = api.get_position(chosenStock)
     print("Current Price: " + position.current_price)
 
@@ -111,6 +110,21 @@ def checkPrice(chosenStock):
 def checkPositions():
     position = api.get_position()
     position
+
+def checkFilledPrice():
+    time.sleep(1)
+
+    activities = api.list_orders(status='all', 
+                                nested='False', 
+                                direction='desc',
+                                limit=1)
+    #print(activities)
+
+    filledPrice = activities[0]
+    #print(filledPrice)
+    #print(filledPrice.filled_avg_price)
+
+    return float(filledPrice.filled_avg_price)
 
 def main():
     chosenStock = ""
@@ -129,20 +143,30 @@ def main():
                 #buyStock(chosenStock)
                 currentPrice = buyStock(chosenStock)
                 print("BOUGHT!")
-                profitPrice = currentPrice + ((currentPrice / 100) * 0.1)
-                print(profitPrice)
-                lossPrice = currentPrice - ((currentPrice / 100) * 0.2)
-                print(lossPrice)
+                print("Price bought at: " + str(currentPrice))
+                profitPrice = math.ceil(currentPrice + ((currentPrice / 100) * 0.1))
+                print("Profit at: " + str(profitPrice))
+                lossPrice = math.floor(currentPrice - ((currentPrice / 100) * 0.2))
+                print("Loss at: " + str(lossPrice))
+                f = open("orders.txt", "a")
+                f.write("Bought: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", Profit Price: " + str(profitPrice) + ", Loss Price: " + str(lossPrice))
+                f.close()
                 sold = False
                 while(not sold):
                     time.sleep(0.1)
                     currentPrice = checkPrice(chosenStock)
                     if(currentPrice >= profitPrice):
                         sellStock(chosenStock)
+                        f = open("orders.txt", "a")
+                        f.write("Sold: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", PROFIT")
+                        f.close()
                         sold = True
                         print("SOLD!")
                     elif(currentPrice <= lossPrice):
                         sellStock(chosenStock)
+                        f = open("orders.txt", "a")
+                        f.write("Sold: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", LOSS")
+                        f.close()
                         sold = True
                         print("SOLD!")
                     elif(checkTime() == 1625):
