@@ -3,7 +3,7 @@ from alpaca_trade_api.rest import REST
 import time
 from datetime import datetime
 from random import randint
-import json
+import atexit
 
 
 BASE_URL = "https://paper-api.alpaca.markets"
@@ -16,7 +16,8 @@ api = REST(key_id=KEY_ID,secret_key=SECRET_KEY,base_url=BASE_URL, api_version = 
 
 def checkDay():
     currentDayAsInt = datetime.today().weekday()
-    print(currentDayAsInt)
+    #print(currentDayAsInt)
+
     return currentDayAsInt
 
 def checkTime():
@@ -31,17 +32,18 @@ def checkTime():
         currentTime = "" + str(currentHour) + str(currentMinute)
     currentTimeAsInt = int(currentTime)
     #print(currentTime)
-    print(currentTimeAsInt)
+    print("Time: " + str(currentTimeAsInt))
+
     return currentTimeAsInt
 
 def chooseStock():
-    value =  randint(0, 8179)
-    print(value)
+    value =  randint(1, 10998)
+    #print(value)
 
-    fp = open(r'.\stocks.txt', 'r')
+    fp = open(r'.\finalStocks.txt', 'r')
     
 
-    with open(r".\stocks.txt", 'r') as fp:
+    with open(r".\finalStocks.txt", 'r') as fp:
         # lines to read
         line_numbers = [value]
         # To store lines
@@ -52,7 +54,9 @@ def chooseStock():
             elif (i > value):
                 break
     #print(lines)
-    print(str(lines[0]))
+    print("Stock to buy: " + str(lines[0]))
+
+    api.get_asset
 
     return str(lines[0])
 
@@ -112,7 +116,7 @@ def checkPositions():
     position
 
 def checkFilledPrice():
-    time.sleep(1)
+    time.sleep(2)
 
     activities = api.list_orders(status='all', 
                                 nested='False', 
@@ -135,21 +139,24 @@ def main():
     daysOfTheWeek = [0, 1, 2, 3, 4]
 
     while(True):
+        atexit.register(sellStock, chosenStock)
         #print("WRONG DAY!")
         if(checkDay() in daysOfTheWeek):
             #print("WRONG TIME!")
-            if((checkTime() >= 830) and (checkTime() <= 2100)):
+            if((checkTime() >= 1430) and (checkTime() <= 2100)):
                 chosenStock = chooseStock()
                 #buyStock(chosenStock)
+                account = api.get_account()
+                moneyInAccount = account.equity
                 currentPrice = buyStock(chosenStock)
                 print("BOUGHT!")
                 print("Price bought at: " + str(currentPrice))
-                profitPrice = math.ceil(currentPrice + ((currentPrice / 100) * 0.1))
+                profitPrice = round((currentPrice + ((currentPrice / 100) * 0.1)), 2)
                 print("Profit at: " + str(profitPrice))
-                lossPrice = math.floor(currentPrice - ((currentPrice / 100) * 0.2))
+                lossPrice = round((currentPrice - ((currentPrice / 100) * 0.2)), 2)
                 print("Loss at: " + str(lossPrice))
                 f = open("orders.txt", "a")
-                f.write("Bought: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", Profit Price: " + str(profitPrice) + ", Loss Price: " + str(lossPrice))
+                f.write("Bought: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", Profit Price: " + str(profitPrice) + ", Loss Price: " + str(lossPrice) + ", Equity: " + moneyInAccount + "\n")
                 f.close()
                 sold = False
                 while(not sold):
@@ -157,15 +164,19 @@ def main():
                     currentPrice = checkPrice(chosenStock)
                     if(currentPrice >= profitPrice):
                         sellStock(chosenStock)
+                        account = api.get_account()
+                        moneyInAccount = account.equity
                         f = open("orders.txt", "a")
-                        f.write("Sold: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", PROFIT")
+                        f.write("Sold: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", Equity: " + moneyInAccount + ", PROFIT" + "\n")
                         f.close()
                         sold = True
                         print("SOLD!")
                     elif(currentPrice <= lossPrice):
                         sellStock(chosenStock)
+                        account = api.get_account()
+                        moneyInAccount = account.equity
                         f = open("orders.txt", "a")
-                        f.write("Sold: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", LOSS")
+                        f.write("Sold: " + chosenStock + ", Fill Price: " + str(currentPrice) + ", Equity: " + moneyInAccount + ", LOSS" + "\n")
                         f.close()
                         sold = True
                         print("SOLD!")
